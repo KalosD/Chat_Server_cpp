@@ -4,22 +4,22 @@
 #include <string>
 using namespace std;
 
-class User
-{
+class User {
 private:
   int id;
   string name;
   string password;
   string state;
+
 public:
-  User(int id = -1, string name = "", string pwd = "", string state = "offline")
-  {
+  User(int id = -1, string name = "", string pwd = "",
+       string state = "offline") {
     this->id = id;
     this->name = name;
     this->password = pwd;
     this->state = state;
   }
-  
+
   void setId(int id) { this->id = id; };
   void setName(string name) { this->name = name; };
   void setPwd(string pwd) { this->password = pwd; };
@@ -30,6 +30,5 @@ public:
   string getPwd() { return this->password; };
   string getState() { return this->state; };
 };
-
 
 #endif
