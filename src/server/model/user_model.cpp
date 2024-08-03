@@ -22,6 +22,7 @@ bool UserModel::insert(User &user) {
 
 // 根据用户号码查询用户信息
 User UserModel::query(int id) {
+  // 组装sql语句
   char sql[1024] = {0};
   snprintf(sql, sizeof(sql), "select * from user where id = %d", id);
 
@@ -37,6 +38,7 @@ User UserModel::query(int id) {
         user.setName(row[1]);
         user.setPwd(row[2]);
         user.setState(row[3]);
+        // 释放资源
         mysql_free_result(res);
         return user;
       }

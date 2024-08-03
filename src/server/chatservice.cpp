@@ -1,6 +1,7 @@
 #include "chatservice.hpp"
 #include "public.hpp"
 #include <muduo/base/Logging.h>
+#include <mutex>
 
 using namespace muduo;
 using namespace std;
@@ -34,10 +35,88 @@ MsgHandler ChatService::getHandler(int msgid) {
 }
 
 // 处理登录业务   ORM  业务层操作的都是对象   DAO
+/**
+ * 登录业务
+ * 从json得到用户id
+ * 从数据中获取此id的用户，判断此用户的密码是否等于json获取到的密码
+ * 判断用户是否重复登录
+ * {"msgid":1,"id":13,"password":"123456"}
+ * {"errmsg":"this account is using, input another!","errno":2,"msgid":2}
+ */
 void ChatService::login(const TcpConnectionPtr &conn, json &js,
                         Timestamp time) {
-  LOG_INFO << "do login service!";
+  // LOG_DEBUG << "do login service!";
+
+  int id = js["id"].get<int>();
+  std::string password = js["password"];
+
+  User user = _userModel.query(id);
+  if (user.getId() == id && user.getPwd() == password) {
+    if (user.getState() == "online") {
+      // 该用户已经登录，不能重复登录
+      json response;
+      response["msgid"] = LOGIN_MSG_ACK;
+      response["errno"] = 2;
+      response["errmsg"] = "this account is online, input another!";
+      conn->send(response.dump());
+    } else {
+      // 登录成功，记录用户连接信息
+      // 需要考虑线程安全问题 onMessage会在不同线程中被调用
+      {
+        // 只需在建立用户连接的时候加锁
+        lock_guard<mutex> lock(_connMutex);
+        _userConnMap.insert({id, conn});
+      }
+
+      // 登录成功，更新用户状态信息 state offline => online
+      user.setState("online");
+      _userModel.updateState(user);
+
+      json response;
+      response["msgid"] = LOGIN_MSG_ACK;
+      response["errno"] = 0;
+      response["id"] = user.getId();
+      response["name"] = user.getName();
+
+      // // id用户登录成功后，向redis订阅channel(id)
+      // _redis.subscribe(id);
+
+      // // 查询该用户是否有离线消息
+      // std::vector<std::string> vec = _offlineMsgModel.query(id);
+      // if (!vec.empty()) {
+      //   response["offlinemsg"] = vec;
+      //   // 读取该用户的离线消息后，将该用户离线消息删除掉
+      //   _offlineMsgModel.remove(id);
+      // } else {
+      //   LOG_INFO << "无离线消息";
+      // }
+
+      // std::vector<User> userVec = _friendModel.query(id);
+      // if (!userVec.empty()) {
+      //   std::vector<std::string> vec;
+      //   for (auto &user : userVec) {
+      //     json js;
+      //     js["id"] = user.getId();
+      //     js["name"] = user.getName();
+      //     js["state"] = user.getState();
+      //     vec.push_back(js.dump());
+      //   }
+      //   response["friends"] = vec;
+      // }
+
+      conn->send(response.dump());
+    }
+  } else {
+    // 登录失败: 用户不存或密码错误
+    json response;
+    response["msgid"] = LOGIN_MSG_ACK;
+    response["errno"] = 1;
+    response["errmsg"] = "accont does not exist or wrong password!";
+
+    conn->send(response.dump());
+  }
 }
+
 // 处理注册业务 name pwd
 void ChatService::reg(const TcpConnectionPtr &conn, json &js, Timestamp time) {
   string name = js["name"];
@@ -46,7 +125,7 @@ void ChatService::reg(const TcpConnectionPtr &conn, json &js, Timestamp time) {
   User user;
   user.setName(name);
   user.setPwd(pwd);
-  bool state = _uerModel.insert(user);
+  bool state = _userModel.insert(user);
   if (state) {
     // 注册成功
     json response;
@@ -62,5 +141,30 @@ void ChatService::reg(const TcpConnectionPtr &conn, json &js, Timestamp time) {
     response["errno"] = 1;
     // 注册已经失败，不需要在json返回id
     conn->send(response.dump());
+  }
+}
+
+/**
+ * 处理客户端异常退出
+ */
+void ChatService::clientCloseExceptionHandler(const TcpConnectionPtr &conn) {
+  User user;
+  // 互斥锁保护
+  {
+    lock_guard<mutex> lock(_connMutex);
+    for (auto it = _userConnMap.begin(); it != _userConnMap.end(); ++it) {
+      if (it->second == conn) {
+        // 从map表删除用户的链接信息
+        user.setId(it->first);
+        _userConnMap.erase(it);
+        break;
+      }
+    }
+  }
+
+  // 更新用户的状态信息
+  if (user.getId() != -1) {
+    user.setState("offline");
+    _userModel.updateState(user);
   }
 }

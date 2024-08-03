@@ -5,6 +5,7 @@
 #include "user_model.hpp"
 #include <functional>
 #include <muduo/net/TcpServer.h>
+#include <mutex>
 #include <unordered_map>
 
 using json = nlohmann::json;
@@ -28,13 +29,20 @@ public:
   void reg(const TcpConnectionPtr &conn, json &js, Timestamp time);
   // 获取消息对应处理器
   MsgHandler getHandler(int);
+  // 处理客户端异常退出
+  void clientCloseExceptionHandler(const TcpConnectionPtr &conn);
 
 private:
   ChatService();
-  // 存储消息id和其对应的业务处理方法
-  unordered_map<int, MsgHandler> _msgHandlerMap; // 消息id对应的处理操作
+  // 存储消息id和其对应的业务处理方法:消息id对应的处理操作
+  unordered_map<int, MsgHandler> _msgHandlerMap;
+  // 存储在线用户的通信连接
+  unordered_map<int, TcpConnectionPtr> _userConnMap;
+  // 定义互斥锁:保证_userConnMap的线程安全
+  mutex _connMutex;
+
   // 数据操作类对象
-  UserModel _uerModel;
+  UserModel _userModel;
 };
 
 #endif
