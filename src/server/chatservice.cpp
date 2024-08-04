@@ -1,5 +1,6 @@
 #include "chatservice.hpp"
 #include "public.hpp"
+#include <functional>
 #include <muduo/base/Logging.h>
 #include <mutex>
 
@@ -18,6 +19,8 @@ ChatService::ChatService() {
       {LOGIN_MSG, std::bind(&ChatService::login, this, _1, _2, _3)});
   _msgHandlerMap.insert(
       {REG_MSG, std::bind(&ChatService::reg, this, _1, _2, _3)});
+  _msgHandlerMap.insert(
+      {ONE_CHAT_MSG, std::bind(&ChatService::one2oneChat, this, _1, _2, _3)});
 }
 
 // 获取消息对应处理器
@@ -141,6 +144,27 @@ void ChatService::reg(const TcpConnectionPtr &conn, json &js, Timestamp time) {
     response["errno"] = 1;
     // 注册已经失败，不需要在json返回id
     conn->send(response.dump());
+  }
+}
+
+// 一对一聊天业务
+void ChatService::one2oneChat(const TcpConnectionPtr &conn, json &js,
+                              Timestamp time) {
+  int toid = js["toid"].get<int>();
+  {
+    lock_guard<mutex> lock(_connMutex);
+    auto it = _userConnMap.find(toid);
+    // 确认是在线状态
+    if (it != _userConnMap.end()) {
+      // TcpConnection::send() 直接发送消息
+      it->second->send(js.dump());
+      return;
+    }
+  }
+  // 用户在其他主机的情况，publish消息到redis
+  User user = _userModel.query(toid);
+  if (user.getState() == "online") {
+    return;
   }
 }
 
