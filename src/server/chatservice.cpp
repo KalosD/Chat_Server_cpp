@@ -136,16 +136,6 @@ void ChatService::login(const TcpConnectionPtr &conn, json &js,
   }
 }
 
-// 处理登出业务
-void ChatService::logoutHandler(const TcpConnectionPtr &conn, json &js, Timestamp time) {
-  int id = js["id"].get<int>();
-  User user = _userModel.query(id);
-  if(user.getId() == id){
-    user.setState("offline");
-    _userModel.updateState(user);
-  }
-}
-
 // 处理注册业务 name pwd
 void ChatService::reg(const TcpConnectionPtr &conn, json &js, Timestamp time) {
   string name = js["name"];
@@ -207,9 +197,27 @@ void ChatService::addFriendHandler(const TcpConnectionPtr &conn, json &js,
   // 存储好友信息
   _friendModel.insert(userId, friendId);
 }
-/**
- * 处理客户端异常退出
- */
+
+// 处理登出业务
+void ChatService::logoutHandler(const TcpConnectionPtr &conn, json &js,
+                                Timestamp time) {
+  int id = js["id"].get<int>();
+  {
+    lock_guard<mutex> lock(_connMutex);
+    auto it = _userConnMap.find(id);
+    if (it != _userConnMap.end()) {
+      _userConnMap.erase(id);
+    }
+  }
+
+  // 更新状态信息
+  User user = _userModel.query(id);
+  user.setState("offline");
+  _userModel.updateState(user);
+}
+
+// 处理客户端异常退出
+
 void ChatService::clientCloseExceptionHandler(const TcpConnectionPtr &conn) {
   User user;
   // 互斥锁保护
