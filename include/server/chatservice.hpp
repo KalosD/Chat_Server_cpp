@@ -3,6 +3,7 @@
 
 #include "json.hpp"
 #include "offlinemessageModel.hpp"
+#include "friendModel.hpp"
 #include "user_model.hpp"
 #include <functional>
 #include <muduo/net/TcpServer.h>
@@ -30,6 +31,8 @@ public:
   void reg(const TcpConnectionPtr &conn, json &js, Timestamp time);
   // 一对一聊天业务
   void one2oneChat(const TcpConnectionPtr &conn, json &js, Timestamp time);
+  // 添加好友业务
+  void addFriendHandler(const TcpConnectionPtr &conn, json &js, Timestamp time);
   // 获取消息对应处理器
   MsgHandler getHandler(int);
   // 处理客户端异常退出
@@ -49,6 +52,8 @@ private:
   // 数据操作类对象
   UserModel _userModel;
   OfflineMsgModel _offlineMsgModel;
+  FriendModel _friendModel;
+
 };
 
 #endif

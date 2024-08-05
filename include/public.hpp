@@ -9,7 +9,8 @@ enum EnMsgType : unsigned int {
   REG_MSG,          // 注册消息
   REGISTER_MSG_ACK, // 注册成功消息
   LOGIN_MSG_ACK,    // 登陆成功消息
-  ONE_CHAT_MSG      // 一对一聊天消息
+  ONE_CHAT_MSG,     // 一对一聊天消息
+  ADD_FRIEND_MSG    // 添加好友消息
 };
 
 

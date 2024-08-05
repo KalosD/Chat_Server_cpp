@@ -23,6 +23,9 @@ ChatService::ChatService() {
   _msgHandlerMap.insert(
       {EnMsgType::ONE_CHAT_MSG,
        std::bind(&ChatService::one2oneChat, this, _1, _2, _3)});
+  _msgHandlerMap.insert(
+      {EnMsgType::ADD_FRIEND_MSG,
+       std::bind(&ChatService::addFriendHandler, this, _1, _2, _3)});
 }
 
 // 获取消息对应处理器
@@ -96,18 +99,19 @@ void ChatService::login(const TcpConnectionPtr &conn, json &js,
         LOG_INFO << "无离线消息";
       }
 
-      // std::vector<User> userVec = _friendModel.query(id);
-      // if (!userVec.empty()) {
-      //   std::vector<std::string> vec;
-      //   for (auto &user : userVec) {
-      //     json js;
-      //     js["id"] = user.getId();
-      //     js["name"] = user.getName();
-      //     js["state"] = user.getState();
-      //     vec.push_back(js.dump());
-      //   }
-      //   response["friends"] = vec;
-      // }
+      // 查询该用户好友信息并返回
+      std::vector<User> userVec = _friendModel.query(id);
+      if (!userVec.empty()) {
+        std::vector<std::string> vec;
+        for (auto &user : userVec) {
+          json js;
+          js["id"] = user.getId();
+          js["name"] = user.getName();
+          js["state"] = user.getState();
+          vec.push_back(js.dump());
+        }
+        response["friends"] = vec;
+      }
 
       conn->send(response.dump());
     }
@@ -174,6 +178,15 @@ void ChatService::one2oneChat(const TcpConnectionPtr &conn, json &js,
   _offlineMsgModel.insert(toid, js.dump());
 }
 
+// 添加朋友业务
+void ChatService::addFriendHandler(const TcpConnectionPtr &conn, json &js,
+                                   Timestamp time) {
+  int userId = js["id"].get<int>();
+  int friendId = js["friendid"].get<int>();
+
+  // 存储好友信息
+  _friendModel.insert(userId, friendId);
+}
 /**
  * 处理客户端异常退出
  */
@@ -200,12 +213,12 @@ void ChatService::clientCloseExceptionHandler(const TcpConnectionPtr &conn) {
 }
 
 // 服务端异常终止之后的操作
-void ChatService::reset(){
+void ChatService::reset() {
   // 组装sql语句
   char sql[1024] = "update user set state='offline' where state='online'";
 
   MySQL mysql;
-  if(mysql.connect()){
+  if (mysql.connect()) {
     mysql.update(sql);
   }
 }
