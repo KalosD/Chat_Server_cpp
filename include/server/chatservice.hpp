@@ -1,9 +1,10 @@
 #ifndef CHATSERVICE_H
 #define CHATSERVICE_H
 
+#include "friendModel.hpp"
 #include "json.hpp"
 #include "offlinemessageModel.hpp"
-#include "friendModel.hpp"
+#include "groupModel.hpp"
 #include "user_model.hpp"
 #include <functional>
 #include <muduo/net/TcpServer.h>
@@ -35,6 +36,12 @@ public:
   void addFriendHandler(const TcpConnectionPtr &conn, json &js, Timestamp time);
   // 获取消息对应处理器
   MsgHandler getHandler(int);
+  // 创建群组业务
+  void createGroup(const TcpConnectionPtr &conn, json &js, Timestamp time);
+  // 加入群组业务
+  void addGroup(const TcpConnectionPtr &conn, json &js, Timestamp time);
+  // 群组聊天业务
+  void groupChat(const TcpConnectionPtr &conn, json &js, Timestamp time);
   // 处理客户端异常退出
   void clientCloseExceptionHandler(const TcpConnectionPtr &conn);
   // 服务端异常终止之后的操作
@@ -53,7 +60,7 @@ private:
   UserModel _userModel;
   OfflineMsgModel _offlineMsgModel;
   FriendModel _friendModel;
-
+  GroupModel _groupModel;
 };
 
 #endif

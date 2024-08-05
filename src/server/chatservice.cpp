@@ -17,15 +17,22 @@ ChatService *ChatService::instance() {
 // 注册消息以及对应的Handler回调操作
 ChatService::ChatService() {
   _msgHandlerMap.insert(
-      {EnMsgType::LOGIN_MSG, std::bind(&ChatService::login, this, _1, _2, _3)});
+      {LOGIN_MSG, std::bind(&ChatService::login, this, _1, _2, _3)});
   _msgHandlerMap.insert(
-      {EnMsgType::REG_MSG, std::bind(&ChatService::reg, this, _1, _2, _3)});
+      {REG_MSG, std::bind(&ChatService::reg, this, _1, _2, _3)});
   _msgHandlerMap.insert(
-      {EnMsgType::ONE_CHAT_MSG,
-       std::bind(&ChatService::one2oneChat, this, _1, _2, _3)});
+      {ONE_CHAT_MSG, std::bind(&ChatService::one2oneChat, this, _1, _2, _3)});
   _msgHandlerMap.insert(
-      {EnMsgType::ADD_FRIEND_MSG,
+      {ADD_FRIEND_MSG,
        std::bind(&ChatService::addFriendHandler, this, _1, _2, _3)});
+
+  // 群组业务管理相关事件处理回调注册
+  _msgHandlerMap.insert({CREATE_GROUP_MSG, std::bind(&ChatService::createGroup,
+                                                     this, _1, _2, _3)});
+  _msgHandlerMap.insert(
+      {ADD_GROUP_MSG, std::bind(&ChatService::addGroup, this, _1, _2, _3)});
+  _msgHandlerMap.insert(
+      {GROUP_CHAT_MSG, std::bind(&ChatService::groupChat, this, _1, _2, _3)});
 }
 
 // 获取消息对应处理器
@@ -220,5 +227,52 @@ void ChatService::reset() {
   MySQL mysql;
   if (mysql.connect()) {
     mysql.update(sql);
+  }
+}
+
+// 创建群组业务
+void ChatService::createGroup(const TcpConnectionPtr &conn, json &js,
+                              Timestamp time) {
+  int userId = js["id"].get<int>();
+  std::string name = js["groupname"];
+  std::string desc = js["groupesc"];
+
+  // 存储新创建的群组消息
+  Group group(-1, name, desc);
+  if (_groupModel.createGroup(group)) {
+    // 存储群组创建人信息
+    _groupModel.addGroup(userId, group.getId(), "creator");
+    json respond;
+    respond["msgid"] = CREATE_GROUP_MSG_ACK;
+    respond["msg"] = "Successfully created!";
+    conn->send(respond.dump());
+  }
+}
+
+// 加入群组业务
+void ChatService::addGroup(const TcpConnectionPtr &conn, json &js,
+                           Timestamp time) {
+  int userId = js["id"].get<int>();
+  int groupId = js["groupid"].get<int>();
+  _groupModel.addGroup(userId, groupId, "normal");
+}
+
+// 群组聊天业务
+void ChatService::groupChat(const TcpConnectionPtr &conn, json &js,
+                            Timestamp time) {
+  int userId = js["id"].get<int>();
+  int groupId = js["groupid"].get<int>();
+  std::vector<int> userIdVec = _groupModel.queryGroupUsers(userId, groupId);
+
+  lock_guard<mutex> lock(_connMutex);
+  for (int id : userIdVec) {
+    auto it = _userConnMap.find(id);
+    if (it != _userConnMap.end()) {
+      // 转发群消息
+      it->second->send(js.dump());
+    } else {
+      // 转储离线消息
+      _offlineMsgModel.insert(id, js.dump());
+    }
   }
 }
