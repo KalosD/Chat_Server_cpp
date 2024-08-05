@@ -4,7 +4,7 @@
 /*
 server和client的公共文件
 */
-enum EnMsgType {
+enum EnMsgType : unsigned int {
   LOGIN_MSG = 1,    // 登录消息
   REG_MSG,          // 注册消息
   REGISTER_MSG_ACK, // 注册成功消息

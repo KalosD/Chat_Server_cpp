@@ -16,11 +16,12 @@ ChatService *ChatService::instance() {
 // 注册消息以及对应的Handler回调操作
 ChatService::ChatService() {
   _msgHandlerMap.insert(
-      {LOGIN_MSG, std::bind(&ChatService::login, this, _1, _2, _3)});
+      {EnMsgType::LOGIN_MSG, std::bind(&ChatService::login, this, _1, _2, _3)});
   _msgHandlerMap.insert(
-      {REG_MSG, std::bind(&ChatService::reg, this, _1, _2, _3)});
+      {EnMsgType::REG_MSG, std::bind(&ChatService::reg, this, _1, _2, _3)});
   _msgHandlerMap.insert(
-      {ONE_CHAT_MSG, std::bind(&ChatService::one2oneChat, this, _1, _2, _3)});
+      {EnMsgType::ONE_CHAT_MSG,
+       std::bind(&ChatService::one2oneChat, this, _1, _2, _3)});
 }
 
 // 获取消息对应处理器
@@ -84,15 +85,15 @@ void ChatService::login(const TcpConnectionPtr &conn, json &js,
       // // id用户登录成功后，向redis订阅channel(id)
       // _redis.subscribe(id);
 
-      // // 查询该用户是否有离线消息
-      // std::vector<std::string> vec = _offlineMsgModel.query(id);
-      // if (!vec.empty()) {
-      //   response["offlinemsg"] = vec;
-      //   // 读取该用户的离线消息后，将该用户离线消息删除掉
-      //   _offlineMsgModel.remove(id);
-      // } else {
-      //   LOG_INFO << "无离线消息";
-      // }
+      // 查询该用户是否有离线消息
+      std::vector<std::string> vec = _offlineMsgModel.query(id);
+      if (!vec.empty()) {
+        response["offlinemsg"] = vec;
+        // 读取该用户的离线消息后，将该用户离线消息删除掉
+        _offlineMsgModel.remove(id);
+      } else {
+        LOG_INFO << "无离线消息";
+      }
 
       // std::vector<User> userVec = _friendModel.query(id);
       // if (!userVec.empty()) {
@@ -161,11 +162,15 @@ void ChatService::one2oneChat(const TcpConnectionPtr &conn, json &js,
       return;
     }
   }
-  // 用户在其他主机的情况，publish消息到redis
-  User user = _userModel.query(toid);
-  if (user.getState() == "online") {
-    return;
-  }
+
+  // // 用户在其他主机的情况，publish消息到redis
+  // User user = _userModel.query(toid);
+  // if (user.getState() == "online") {
+  //   return;
+  // }
+
+  // toId 不在线则存储离线消息
+  _offlineMsgModel.insert(toid, js.dump());
 }
 
 /**
