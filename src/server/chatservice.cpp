@@ -1,4 +1,5 @@
 #include "chatservice.hpp"
+#include "db.h"
 #include "public.hpp"
 #include <functional>
 #include <muduo/base/Logging.h>
@@ -195,5 +196,16 @@ void ChatService::clientCloseExceptionHandler(const TcpConnectionPtr &conn) {
   if (user.getId() != -1) {
     user.setState("offline");
     _userModel.updateState(user);
+  }
+}
+
+// 服务端异常终止之后的操作
+void ChatService::reset(){
+  // 组装sql语句
+  char sql[1024] = "update user set state='offline' where state='online'";
+
+  MySQL mysql;
+  if(mysql.connect()){
+    mysql.update(sql);
   }
 }

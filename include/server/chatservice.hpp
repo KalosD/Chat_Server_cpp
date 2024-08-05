@@ -34,6 +34,8 @@ public:
   MsgHandler getHandler(int);
   // 处理客户端异常退出
   void clientCloseExceptionHandler(const TcpConnectionPtr &conn);
+  // 服务端异常终止之后的操作
+  void reset();
 
 private:
   ChatService();
