@@ -1,6 +1,7 @@
 #include "chatservice.hpp"
 #include "db.h"
 #include "public.hpp"
+#include "user.hpp"
 #include <functional>
 #include <muduo/base/Logging.h>
 #include <mutex>
@@ -19,12 +20,14 @@ ChatService::ChatService() {
   _msgHandlerMap.insert(
       {LOGIN_MSG, std::bind(&ChatService::login, this, _1, _2, _3)});
   _msgHandlerMap.insert(
-      {REG_MSG, std::bind(&ChatService::reg, this, _1, _2, _3)});
+      {REGISTER_MSG, std::bind(&ChatService::reg, this, _1, _2, _3)});
   _msgHandlerMap.insert(
       {ONE_CHAT_MSG, std::bind(&ChatService::one2oneChat, this, _1, _2, _3)});
   _msgHandlerMap.insert(
       {ADD_FRIEND_MSG,
        std::bind(&ChatService::addFriendHandler, this, _1, _2, _3)});
+  _msgHandlerMap.insert(
+      {LOGOUT_MSG, std::bind(&ChatService::logoutHandler, this, _1, _2, _3)});
 
   // 群组业务管理相关事件处理回调注册
   _msgHandlerMap.insert({CREATE_GROUP_MSG, std::bind(&ChatService::createGroup,
@@ -130,6 +133,16 @@ void ChatService::login(const TcpConnectionPtr &conn, json &js,
     response["errmsg"] = "accont does not exist or wrong password!";
 
     conn->send(response.dump());
+  }
+}
+
+// 处理登出业务
+void ChatService::logoutHandler(const TcpConnectionPtr &conn, json &js, Timestamp time) {
+  int id = js["id"].get<int>();
+  User user = _userModel.query(id);
+  if(user.getId() == id){
+    user.setState("offline");
+    _userModel.updateState(user);
   }
 }
 
