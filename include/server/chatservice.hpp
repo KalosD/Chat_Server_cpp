@@ -2,9 +2,10 @@
 #define CHATSERVICE_H
 
 #include "friendModel.hpp"
+#include "groupModel.hpp"
 #include "json.hpp"
 #include "offlinemessageModel.hpp"
-#include "groupModel.hpp"
+#include "redis.hpp"
 #include "user_model.hpp"
 #include <functional>
 #include <muduo/net/TcpServer.h>
@@ -48,6 +49,8 @@ public:
   void clientCloseExceptionHandler(const TcpConnectionPtr &conn);
   // 服务端异常终止之后的操作
   void reset();
+  // redis订阅消息触发的回调函数
+  void redisSubscribeMessageHandler(int channel, string message);
 
 private:
   ChatService();
@@ -63,6 +66,9 @@ private:
   OfflineMsgModel _offlineMsgModel;
   FriendModel _friendModel;
   GroupModel _groupModel;
+
+  // redis操作对象
+  Redis _redis;
 };
 
 #endif
