@@ -326,7 +326,7 @@ void showCurrentUserData() {
       cout << group.getId() << " " << group.getName() << " | " << group.getDesc()
            << endl;
       for (GroupUser &user : group.getUsers()) {
-        cout << user.getId() << " " << user.getName() << " | " << user.getState()
+        cout << "\t" << user.getId() << " " << user.getName() << " : " << user.getState()
              << " " << user.getRole() << endl;
       }
     }
