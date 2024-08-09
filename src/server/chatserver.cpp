@@ -36,6 +36,7 @@ void ChatServer::onMessage(const TcpConnectionPtr &conn, Buffer *buffer,
   json js = json::parse(buf);
   // 目的：完全解耦网络模块和业务模块的代码
   // 通过js["msgid"]获取=>业务handler=>conn js time
-  auto msgHandler = ChatService::instance()->getHandler(js["msgid"].get<int>());
+  ChatService *p = ChatService::instance();
+  auto msgHandler = p->getHandler(js["msgid"].get<int>());
   msgHandler(conn, js, time);
 }

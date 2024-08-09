@@ -193,8 +193,7 @@ void doLoginResponse(json &responsejs) {
   {
     cerr << responsejs["errmsg"] << endl;
     g_isLoginSuccess = false;
-  } else // 登录成功
-  {
+  } else { // 登录成功
     // 记录当前用户的id和name
     g_currentUser.setId(responsejs["id"].get<int>());
     g_currentUser.setName(responsejs["name"]);
@@ -324,10 +323,10 @@ void showCurrentUserData() {
   cout << "----------------------group list----------------------" << endl;
   if (!g_currentUserGroupList.empty()) {
     for (Group &group : g_currentUserGroupList) {
-      cout << group.getId() << " " << group.getName() << " " << group.getDesc()
+      cout << group.getId() << " " << group.getName() << " | " << group.getDesc()
            << endl;
       for (GroupUser &user : group.getUsers()) {
-        cout << user.getId() << " " << user.getName() << " " << user.getState()
+        cout << user.getId() << " " << user.getName() << " | " << user.getState()
              << " " << user.getRole() << endl;
       }
     }

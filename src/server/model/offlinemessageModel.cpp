@@ -1,5 +1,6 @@
 #include "offlinemessageModel.hpp"
-#include "db.h"
+#include "connection.hpp"
+#include "connectionPool.hpp"
 
 // 存储用户的离线消息
 void OfflineMsgModel::insert(int userId, std::string msg) {
@@ -8,10 +9,16 @@ void OfflineMsgModel::insert(int userId, std::string msg) {
   snprintf(sql, sizeof(sql), "insert into offlinemessage values(%d, '%s')",
            userId, msg.c_str());
 
-  MySQL mysql;
-  if (mysql.connect()) {
-    mysql.update(sql);
+  ConnectionPool *pcp = ConnectionPool::getConnectionPool();
+  shared_ptr<Connection> pconn = pcp->getConnection();
+  if (pconn != nullptr) {
+    pconn->update(sql);
   }
+
+  // Connection mysql;
+  // if (mysql.connect()) {
+  //   mysql.update(sql);
+  // }
 }
 
 // 删除用户的离线消息
@@ -21,10 +28,16 @@ void OfflineMsgModel::remove(int userId) {
   snprintf(sql, sizeof(sql), "delete from offlinemessage where userid=%d",
            userId);
 
-  MySQL mysql;
-  if (mysql.connect()) {
-    mysql.update(sql);
+  ConnectionPool *pcp = ConnectionPool::getConnectionPool();
+  shared_ptr<Connection> pconn = pcp->getConnection();
+  if (pconn != nullptr) {
+    pconn->update(sql);
   }
+
+  // Connection mysql;
+  // if (mysql.connect()) {
+  //   mysql.update(sql);
+  // }
 }
 
 // 查询用户的离线消息
@@ -35,9 +48,11 @@ std::vector<std::string> OfflineMsgModel::query(int userId) {
            "select message from offlinemessage where userid = %d", userId);
 
   std::vector<std::string> vec;
-  MySQL mysql;
-  if (mysql.connect()) {
-    MYSQL_RES *res = mysql.query(sql);
+  
+  ConnectionPool *pcp = ConnectionPool::getConnectionPool();
+  shared_ptr<Connection> pconn = pcp->getConnection();
+  if (pconn != nullptr) {
+    MYSQL_RES *res = pconn->query(sql);
     if (res != nullptr) {
       // 把userid用户的所有消息放入vec中返回
       MYSQL_ROW row;
@@ -48,5 +63,19 @@ std::vector<std::string> OfflineMsgModel::query(int userId) {
       return vec;
     }
   }
+
+  // Connection mysql;
+  // if (mysql.connect()) {
+  //   MYSQL_RES *res = mysql.query(sql);
+  //   if (res != nullptr) {
+  //     // 把userid用户的所有消息放入vec中返回
+  //     MYSQL_ROW row;
+  //     while ((row = mysql_fetch_row(res)) != nullptr) {
+  //       vec.push_back(row[0]);
+  //     }
+  //     mysql_free_result(res);
+  //     return vec;
+  //   }
+  // }
   return vec;
 }

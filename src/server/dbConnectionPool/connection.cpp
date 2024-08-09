@@ -1,27 +1,22 @@
-#include "db.h"
+#include "connection.hpp"
 #include <muduo/base/Logging.h>
 
-// 数据库配置信息
-static const string server = "127.0.0.1";
-static const string user = "root";
-static const string password = "000103";
-static const string dbname = "user_chat";
-
 // 初始化数据库连接
-MySQL::MySQL() { _conn = mysql_init(nullptr); }
+Connection::Connection() { _conn = mysql_init(nullptr); }
 
 // 释放数据库连接资源
-MySQL::~MySQL() {
+Connection::~Connection() {
   if (_conn != nullptr) {
     mysql_close(_conn);
   }
 }
 
 // 连接数据库
-bool MySQL::connect() {
+bool Connection::connect(string server, string user, string password,
+                         string dbname, unsigned int port) {
   MYSQL *p =
       mysql_real_connect(_conn, server.c_str(), user.c_str(), password.c_str(),
-                         dbname.c_str(), 3306, nullptr, 0);
+                         dbname.c_str(), port, nullptr, 0);
   if (p != nullptr) {
     // C和C++代码默认的编码字符是ASCII，如果不设置，从MySQL上拉下来的中文显示？
     mysql_query(_conn, "set names gbk");
@@ -33,7 +28,7 @@ bool MySQL::connect() {
 }
 
 // 更新操作
-bool MySQL::update(string sql) {
+bool Connection::update(string sql) {
   if (mysql_query(_conn, sql.c_str())) {
     LOG_INFO << __FILE__ << ":" << __LINE__ << ":" << sql << "更新失败!";
     return false;
@@ -43,7 +38,7 @@ bool MySQL::update(string sql) {
 }
 
 // 查询操作
-MYSQL_RES *MySQL::query(string sql) {
+MYSQL_RES *Connection::query(string sql) {
   if (mysql_query(_conn, sql.c_str())) {
     LOG_INFO << __FILE__ << ":" << __LINE__ << ":" << sql << "查询失败!";
     return nullptr;
@@ -53,4 +48,4 @@ MYSQL_RES *MySQL::query(string sql) {
 }
 
 // 获取连接
-MYSQL *MySQL::getConnection() { return _conn; }
+MYSQL *Connection::getConnection() { return _conn; }

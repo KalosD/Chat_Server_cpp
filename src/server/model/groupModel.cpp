@@ -1,5 +1,6 @@
 #include "groupModel.hpp"
-#include "db.h"
+#include "connection.hpp"
+#include "connectionPool.hpp"
 
 // 创建群组（设置群组名字和描述）
 bool GroupModel::createGroup(Group &group) {
@@ -10,13 +11,22 @@ bool GroupModel::createGroup(Group &group) {
            "insert into allgroup(groupname, groupdesc) values('%s', '%s')",
            group.getName().c_str(), group.getDesc().c_str());
 
-  MySQL mysql;
-  if (mysql.connect()) {
-    if (mysql.update(sql)) {
-      group.setId(mysql_insert_id(mysql.getConnection()));
+  ConnectionPool *pcp = ConnectionPool::getConnectionPool();
+  shared_ptr<Connection> pconn = pcp->getConnection();
+  if (pconn != nullptr) {
+    if (pconn->update(sql)) {
+      group.setId(mysql_insert_id(pconn->getConnection()));
       return true;
     }
   }
+
+  // Connection mysql;
+  // if (mysql.connect()) {
+  //   if (mysql.update(sql)) {
+  //     group.setId(mysql_insert_id(mysql.getConnection()));
+  //     return true;
+  //   }
+  // }
 
   return false;
 }
@@ -27,18 +37,25 @@ void GroupModel::addGroup(int userid, int groupid, std::string role) {
   snprintf(sql, sizeof(sql), "insert into groupuser values(%d, %d, '%s')",
            groupid, userid, role.c_str());
 
-  MySQL mysql;
-  if (mysql.connect()) {
-    mysql.update(sql);
+  ConnectionPool *pcp = ConnectionPool::getConnectionPool();
+  shared_ptr<Connection> pconn = pcp->getConnection();
+  if (pconn != nullptr) {
+    pconn->update(sql);
   }
+
+  // Connection mysql;
+  // if (mysql.connect()) {
+  //   mysql.update(sql);
+  // }
 }
 
 // 查询用户所在群组信息
 std::vector<Group> GroupModel::queryGroups(int userid) {
   /**
-   * // TODO:MySQL联表查询
+   * // MySQL联结查询
    * 1. 先根据userid在groupuser表中查询出该用户所属的群组信息
-   * 2. 再根据群组信息，查询属于该群组的所有用户的userid，并且和user表进行多表联合查询，查出用户的详细信息
+   * 2.
+   * 再根据群组信息，查询属于该群组的所有用户的userid，并且和user表进行多表联合查询，查出用户的详细信息
    */
   char sql[1024] = {0};
   snprintf(sql, sizeof(sql),
@@ -48,9 +65,10 @@ std::vector<Group> GroupModel::queryGroups(int userid) {
 
   std::vector<Group> groupVec;
 
-  MySQL mysql;
-  if (mysql.connect()) {
-    MYSQL_RES *res = mysql.query(sql);
+  ConnectionPool *pcp = ConnectionPool::getConnectionPool();
+  shared_ptr<Connection> pconn = pcp->getConnection();
+  if (pconn != nullptr) {
+    MYSQL_RES *res = pconn->query(sql);
     if (res != nullptr) {
       MYSQL_ROW row;
       // 查出userid所有的群组信息
@@ -65,14 +83,14 @@ std::vector<Group> GroupModel::queryGroups(int userid) {
     }
   }
 
-  // 查询群组的用户信息
+    // 查询群组的用户信息
   for (Group &group : groupVec) {
     snprintf(sql, sizeof(sql),
              "select a.id,a.name,a.state,b.grouprole from user a \
             inner join groupuser b on b.userid = a.id where b.groupid=%d",
              group.getId());
 
-    MYSQL_RES *res = mysql.query(sql);
+    MYSQL_RES *res = pconn->query(sql);
     if (res != nullptr) {
       MYSQL_ROW row;
       while ((row = mysql_fetch_row(res)) != nullptr) {
@@ -86,6 +104,43 @@ std::vector<Group> GroupModel::queryGroups(int userid) {
       mysql_free_result(res);
     }
   }
+
+  // Connection mysql;
+  // if (mysql.connect()) {
+  //   MYSQL_RES *res = mysql.query(sql);
+  //   if (res != nullptr) {
+  //     MYSQL_ROW row;
+  //     // 查出userid所有的群组信息
+  //     while ((row = mysql_fetch_row(res)) != nullptr) {
+  //       Group group;
+  //       group.setId(atoi(row[0]));
+  //       group.setName(row[1]);
+  //       group.setDesc(row[2]);
+  //       groupVec.push_back(group);
+  //     }
+  //     mysql_free_result(res);
+  //   }
+  // }
+  // // 查询群组的用户信息
+  // for (Group &group : groupVec) {
+  //   snprintf(sql, sizeof(sql),
+  //            "select a.id,a.name,a.state,b.grouprole from user a \
+  //           inner join groupuser b on b.userid = a.id where b.groupid=%d",
+  //            group.getId());
+  //   MYSQL_RES *res = mysql.query(sql);
+  //   if (res != nullptr) {
+  //     MYSQL_ROW row;
+  //     while ((row = mysql_fetch_row(res)) != nullptr) {
+  //       GroupUser user;
+  //       user.setId(atoi(row[0]));
+  //       user.setName(row[1]);
+  //       user.setState(row[2]);
+  //       user.setRole(row[3]);
+  //       group.getUsers().push_back(user);
+  //     }
+  //     mysql_free_result(res);
+  //   }
+  // }
   return groupVec;
 }
 
@@ -97,9 +152,11 @@ std::vector<int> GroupModel::queryGroupUsers(int userid, int groupid) {
           groupid, userid);
 
   vector<int> idVec;
-  MySQL mysql;
-  if (mysql.connect()) {
-    MYSQL_RES *res = mysql.query(sql);
+
+  ConnectionPool *pcp = ConnectionPool::getConnectionPool();
+  shared_ptr<Connection> pconn = pcp->getConnection();
+  if (pconn != nullptr) {
+    MYSQL_RES *res = pconn->query(sql);
     if (res != nullptr) {
       MYSQL_ROW row;
       while ((row = mysql_fetch_row(res)) != nullptr) {
@@ -108,5 +165,17 @@ std::vector<int> GroupModel::queryGroupUsers(int userid, int groupid) {
       mysql_free_result(res);
     }
   }
+
+  // Connection mysql;
+  // if (mysql.connect()) {
+  //   MYSQL_RES *res = mysql.query(sql);
+  //   if (res != nullptr) {
+  //     MYSQL_ROW row;
+  //     while ((row = mysql_fetch_row(res)) != nullptr) {
+  //       idVec.push_back(atoi(row[0]));
+  //     }
+  //     mysql_free_result(res);
+  //   }
+  // }
   return idVec;
 }

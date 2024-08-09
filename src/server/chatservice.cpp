@@ -1,5 +1,4 @@
 #include "chatservice.hpp"
-#include "db.h"
 #include "public.hpp"
 #include "user.hpp"
 #include <functional>
@@ -253,13 +252,7 @@ void ChatService::clientCloseExceptionHandler(const TcpConnectionPtr &conn) {
 
 // 服务端异常终止之后的操作
 void ChatService::reset() {
-  // 组装sql语句
-  char sql[1024] = "update user set state='offline' where state='online'";
-
-  MySQL mysql;
-  if (mysql.connect()) {
-    mysql.update(sql);
-  }
+  _userModel.resetState();
 }
 
 // 创建群组业务
