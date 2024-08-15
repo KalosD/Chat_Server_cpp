@@ -18,6 +18,7 @@ public:
 private:
   // 单例
   ConnectionPool();
+  ~ConnectionPool();
   // 运行在独立的线程中，专门负责生产新连接
   void produceConnectionTask();
   // 扫描超过maxIdleTime时间的空闲连接，进行对于的连接回收

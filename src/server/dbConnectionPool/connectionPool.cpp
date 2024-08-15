@@ -32,9 +32,17 @@ ConnectionPool::ConnectionPool() {
   scanner.detach();
 }
 
+ConnectionPool::~ConnectionPool(){
+  while(!_connectionQue.empty()){
+    Connection *pconn = _connectionQue.front();
+    _connectionQue.pop();
+    delete pconn;
+  }
+}
+
 // 运行在独立的线程中，专门负责生产新连接
 void ConnectionPool::produceConnectionTask() {
-  for (;;) {
+  while(true) {
     unique_lock<mutex> lock(_queueMutex);
     while (!_connectionQue.empty()) {
       cv.wait(lock); // 队列不空，此处生产线程进入等待状态
