@@ -28,6 +28,7 @@ private:
   mutex _queueMutex;         // 保证连接队列线程安全的互斥锁
   atomic_int _connectionCnt; // 记录所创建的connecttion连接的总数量
   condition_variable cv; // 设置条件变量用于连接生产线程和消费线程通信
+  bool _stop;
 };
 
 #endif
