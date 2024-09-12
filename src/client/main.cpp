@@ -323,11 +323,11 @@ void showCurrentUserData() {
   cout << "----------------------group list----------------------" << endl;
   if (!g_currentUserGroupList.empty()) {
     for (Group &group : g_currentUserGroupList) {
-      cout << group.getId() << " " << group.getName() << " | " << group.getDesc()
-           << endl;
+      cout << group.getId() << " " << group.getName() << " | "
+           << group.getDesc() << endl;
       for (GroupUser &user : group.getUsers()) {
-        cout << "\t" << user.getId() << " " << user.getName() << " : " << user.getState()
-             << " " << user.getRole() << endl;
+        cout << "\t" << user.getId() << " " << user.getName() << " : "
+             << user.getState() << " " << user.getRole() << endl;
       }
     }
   }

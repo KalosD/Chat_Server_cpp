@@ -1,4 +1,5 @@
 #include "redis.hpp"
+#include <functional>
 #include <hiredis/hiredis.h>
 #include <iostream>
 #include <thread>
@@ -31,7 +32,7 @@ bool Redis::connect() {
   }
 
   // 独立线程中接收订阅通道的消息
-  thread t([&]() { observer_channel_message(); });
+  thread t(std::bind(&Redis::observer_channel_message, this));
   t.detach();
 
   cout << "connect redis-server success!" << endl;
