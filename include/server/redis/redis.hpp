@@ -4,6 +4,7 @@
 #include <functional>
 #include <hiredis/hiredis.h>
 #include <string>
+#include <librdkafka/rdkafkacpp.h>
 
 using namespace std;
 using redis_handler = function<void(int, string)>;
